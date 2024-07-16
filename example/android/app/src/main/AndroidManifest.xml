@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.codingdevs.thermal_printer_example">
+    package="com.codingdevs.thermal_printer_example"
+    android:enableOnBackInvokedCallback="true"
+    >
 
     <application
         android:name="${applicationName}"
