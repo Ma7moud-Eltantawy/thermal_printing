@@ -213,6 +213,8 @@ class ThermalPrinterPlugin : FlutterPlugin, MethodCallHandler, PluginRegistry.Re
                     bluetoothService.cleanHandlerBtBle()
                     bluetoothService.scanBluDevice(channel)
                     result.success(null)
+                } else {
+                    result.error("BLUETOOTH_OFF", "Bluetooth is off", null)
                 }
             }
             call.method.equals("getBluetoothLeList") -> {
@@ -303,15 +305,17 @@ class ThermalPrinterPlugin : FlutterPlugin, MethodCallHandler, PluginRegistry.Re
      */
 
     private fun verifyIsBluetoothIsOn(): Boolean {
-        if (checkPermissions()) {
-            if (!bluetoothService.mBluetoothAdapter.isEnabled) {
-                if (requestPermissionBT) return false
-                val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-                currentActivity?.let { startActivityForResult(it, enableBtIntent, PERMISSION_ENABLE_BLUETOOTH, null) }
-                requestPermissionBT = true
-                return false
-            }
-        } else return false
+        context?.let {
+            if (checkPermissions()) {
+                if (!bluetoothService.mBluetoothAdapter.isEnabled) {
+                    if (requestPermissionBT) return false
+                    val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                    currentActivity?.let { activity -> startActivityForResult(activity, enableBtIntent, PERMISSION_ENABLE_BLUETOOTH, null) }
+                    requestPermissionBT = true
+                    return false
+                }
+            } else return false
+        } ?: return false
         return true
     }
 
@@ -371,8 +375,7 @@ class ThermalPrinterPlugin : FlutterPlugin, MethodCallHandler, PluginRegistry.Re
     private fun checkPermissions(): Boolean {
         val permissions = mutableListOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
-//            Manifest.permission.BLUETOOTH,
-//            Manifest.permission.BLUETOOTH_ADMIN,
+            // Other permissions
         )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -380,12 +383,18 @@ class ThermalPrinterPlugin : FlutterPlugin, MethodCallHandler, PluginRegistry.Re
             permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
         }
 
-        if (!hasPermissions(context, *permissions.toTypedArray())) {
-            ActivityCompat.requestPermissions(currentActivity!!, permissions.toTypedArray(), PERMISSION_ALL)
-            return false
-        }
-        return true
+        return context?.let { ctx ->
+            if (!hasPermissions(ctx, *permissions.toTypedArray())) {
+                currentActivity?.let { activity ->
+                    ActivityCompat.requestPermissions(activity, permissions.toTypedArray(), PERMISSION_ALL)
+                }
+                false
+            } else {
+                true
+            }
+        } ?: false
     }
+
 
     private fun hasPermissions(context: Context?, vararg permissions: String?): Boolean {
         if (context != null) {
@@ -397,7 +406,6 @@ class ThermalPrinterPlugin : FlutterPlugin, MethodCallHandler, PluginRegistry.Re
         }
         return true
     }
-
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         currentActivity = binding.activity
